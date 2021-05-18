@@ -14,11 +14,16 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import com.example.digimind.R
 import com.example.digimind.Task
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.android.synthetic.main.fragment_home.*
 
 class HomeFragment : Fragment() {
 
     private var adaptador: AdaptadorTareas? = null
     private lateinit var homeViewModel: HomeViewModel
+    private lateinit var storage: FirebaseFirestore
+    private lateinit var auth: FirebaseAuth
 
     companion object{
         var tasks = ArrayList<Task>()
@@ -30,6 +35,10 @@ class HomeFragment : Fragment() {
             container: ViewGroup?,
             savedInstanceState: Bundle?
     ): View? {
+
+        this.storage = FirebaseFirestore.getInstance()
+        this.auth = FirebaseAuth.getInstance()
+
         homeViewModel =
                 ViewModelProviders.of(this).get(HomeViewModel::class.java)
         val root = inflater.inflate(R.layout.fragment_home, container, false)
@@ -51,13 +60,43 @@ class HomeFragment : Fragment() {
     }
 
     fun fillTasks(){
-        tasks.add(Task("Practice 1", arrayListOf("Tuesday"), "17:30"))
-        tasks.add(Task("Practice 2", arrayListOf("Monday", "Sunday"), "17:40"))
-        tasks.add(Task("Practice 3", arrayListOf("Wednesday"), "14:00"))
-        tasks.add(Task("Practice 4", arrayListOf("Saturday"), "11:00"))
-        tasks.add(Task("Practice 5", arrayListOf("Friday"), "13:00"))
-        tasks.add(Task("Practice 6", arrayListOf("Thursday"), "10:40"))
-        tasks.add(Task("Practice 7", arrayListOf("Monday"), "12:00"))
+        this.storage.collection("actividades")
+            .whereEqualTo("email", auth.currentUser.email)
+            .get()
+            .addOnSuccessListener { it ->
+                it.forEach {
+                    var dias = ArrayList<String>()
+
+                    if (it.getBoolean("lu") == true) {
+                        dias.add("Monday")
+                    }
+                    if (it.getBoolean("ma") == true) {
+                        dias.add("Monday")
+                    }
+                    if (it.getBoolean("mi") == true) {
+                        dias.add("Wednesday")
+                    }
+
+                    if (it.getBoolean("ju") == true) {
+                        dias.add("Thursday")
+                    }
+
+                    if (it.getBoolean("vi") == true) {
+                        dias.add("Friday")
+                    }
+
+                    if (it.getBoolean("sa") == true) {
+                        dias.add("Saturday")
+                    }
+
+                    if (it.getBoolean("do") == true) {
+                        dias.add("Sunday")
+                    }
+                    tasks!!.add(Task(it.getString("actividad")!!, dias, it.getString("tiempo")!!))
+                }
+                adaptador = AdaptadorTareas(context, tasks)
+                gridview.adapter = adaptador
+            }
 
     }
 
@@ -65,7 +104,7 @@ class HomeFragment : Fragment() {
         var tasks = ArrayList<Task>()
         var context: Context? = null
 
-        constructor(contexto: Context, tasks: ArrayList<Task>){
+        constructor(contexto: Context?, tasks: ArrayList<Task>){
             this.context = contexto
             this.tasks = tasks
         }
